@@ -1,0 +1,4 @@
+enum MajorButtonType {
+  addNew,
+  scanExisting,
+}

@@ -1,0 +1,125 @@
+plugins {
+    id "com.android.application"
+    id "kotlin-android"
+    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
+    id "dev.flutter.flutter-gradle-plugin"
+}
+
+def keystoreProperties = new Properties()
+def keystorePropertiesFile = rootProject.file('key.properties')
+if (keystorePropertiesFile.exists()) {
+   keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
+def taskName = getGradle().getStartParameter().getTaskRequests().toString().toLowerCase();
+def gradleKeyAliasSuffix = ""
+def appDebugNameSuffix = ""
+def appDebugIdSuffix = ""
+
+// Google part
+if (taskName.contains("google")){
+    gradleKeyAliasSuffix = "Google";
+    appDebugNameSuffix = "Google "
+    // appDebugIdSuffix = ".debug"
+// Huawei part
+} else if (taskName.contains("huawei")){
+    apply plugin: 'com.huawei.agconnect'
+    gradleKeyAliasSuffix = "Huawei"
+    appDebugNameSuffix = "Huawei "
+    // appDebugIdSuffix = ".debug"
+// RuStore part
+} else if (taskName.contains("rustore")){
+    gradleKeyAliasSuffix = "Google"
+    appDebugNameSuffix = "RStore "
+    // Needs for test ru-purchase in debug.
+    appDebugIdSuffix = ".ru"
+}
+
+android {
+    namespace = "com.mi3van.my_precious"
+    compileSdk = flutter.compileSdkVersion
+    ndkVersion = "25.1.8937393" // flutter.ndkVersion - 23.1.7779620.
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    kotlinOptions {
+        jvmTarget = JavaVersion.VERSION_1_8
+    }
+
+    defaultConfig {
+        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
+        applicationId "com.mi3van.my_precious"
+        // You can update the following values to match your application needs.
+        // For more information, see: https://docs.flutter.dev/deployment/android#reviewing-the-build-configuration.
+        // flutter.minSdkVersion is 21 at 2024.
+        minSdk = 23 
+        // Is the 33 by default
+        targetSdk = flutter.targetSdkVersion
+        versionCode = flutter.versionCode
+        versionName = flutter.versionName
+    }
+    
+    signingConfigs {
+        debug {
+            keyAlias keystoreProperties["keyDebug${gradleKeyAliasSuffix}Alias"]
+            keyPassword keystoreProperties["keyPassword"]
+            storeFile file(keystoreProperties["storeFile"])
+            storePassword keystoreProperties["storePassword"]
+        }
+        release {
+            keyAlias keystoreProperties["keyRelease${gradleKeyAliasSuffix}Alias"]
+            keyPassword keystoreProperties["keyPassword"]
+            storeFile file(keystoreProperties["storeFile"])
+            storePassword keystoreProperties["storePassword"]
+        }
+    }
+
+    flavorDimensions "store"
+
+    productFlavors {
+        google {
+            dimension "store"
+        }
+        huawei {
+            dimension "store"
+            versionNameSuffix ".hw"
+            applicationIdSuffix ".hw"
+        }
+        rustore {
+            dimension "store"
+            versionNameSuffix ".ru"
+        }
+    }
+
+    buildTypes {
+        defaultConfig {
+            // https://flutter.dev/docs/deployment/android#what-are-the-supported-target-architectures
+            // Dirty hack for fix build crash https://github.com/flutter/flutter/issues/83596
+            // Also support APKs with 32-bit and 64-bit https://github.com/flutter/flutter/issues/18494
+            ndk {
+                abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86_64'
+            }
+        }
+        debug {
+            signingConfig signingConfigs.debug
+            manifestPlaceholders.appNameSuffix = appDebugNameSuffix
+            applicationIdSuffix appDebugIdSuffix
+            versionNameSuffix ".debug"
+        }
+        release {
+            signingConfig signingConfigs.release
+            manifestPlaceholders.appNameSuffix = ""
+
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+}
+
+flutter {
+    source '../..'
+}
